@@ -166,7 +166,7 @@ func (ld *LD) Transform(x mat.Matrix) *mat.Dense {
 // Returns which zone the set of data would be in
 func (ld *LD) Predict(x []float64) int {
 	if len(x) != ld.p {
-		panic("Invalid imput vector size")
+		panic("Invalid input vector size")
 	}
 	var y int
 	var max = math.Inf(-1)
@@ -190,4 +190,14 @@ func (ld *LD) Predict(x []float64) int {
 	}
 	return y
 
+}
+
+// GetEigen is a getter for eigen values
+//
+//
+//
+// No parameters
+// Returns eigen values
+func (ld *LD) GetEigen() mat.EigenSym {
+	return ld.eigen
 }
