@@ -117,10 +117,12 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		ld.ct[i] = math.Log(priori[i])
 	}
 
+	// Calculate covariance matrix
+	// First part is within-class scatter matrix
 	for i := 0; i < ld.n; i++ {
 		for j := 0; j < ld.p; j++ {
 			for l := 0; l <= j; l++ {
-				C.SetSym(j, l, (C.At(j, l) + ((x.At(i, j) - colmean[j]) * (x.At(i, l) - colmean[l]))))
+				C.SetSym(j, l, (C.At(j, l) + ((x.At(i, j) - ld.mu.At(y[i], j)) * (x.At(i, l) - ld.mu.At(y[i], l)))))
 			}
 		}
 	}
