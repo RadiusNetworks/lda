@@ -64,7 +64,7 @@ func TestLinearDiscriminant(t *testing.T) {
 	// fmt.Println(len(trainingDataNumbers))
 	// fmt.Println(len(trainingDataText))
 	// fmt.Println(dataMatrix.Dims())
-	fmt.Println(m)
+	// fmt.Println(m)
 
 tests:
 	for i, test := range []struct {
@@ -79,17 +79,19 @@ tests:
 		{
 			data:   dataMatrix,
 			labels: labelsNumbers,
-			testPredict: mat.NewDense(2, 4, []float64{
+			testPredict: mat.NewDense(3, 4, []float64{
 				5.0, 3.3, 1.4, 0.2,
-				7.0, 3.2, 4.7, 1.4,
+				7.0, 3.2, 4.7, 1.5,
+				6.3, 3.3, 6.0, 2.5,
 			}),
-			wantVecs: mat.NewDense(3, 3, []float64{
-				1, 0, 0,
-				0, 1, 0,
-				0, 0, 1,
+			wantVecs: mat.NewDense(4, 4, []float64{
+				-0.2049, -0.3871, 0.5465, 0.7138,
+				-0.009, -0.589, 0.2543, -0.767,
+				0.179, -0.3178, -0.3658, 0.6011,
+				0.179, -0.3178, -0.3658, 0.6011,
 			}),
-			wantVars:  []float64{1, 1},
-			wantClass: []int{0, 1},
+			wantVars:  []float64{3.23e+01, 2.78e-01, 4.02e-17, -4.02e-17},
+			wantClass: []int{0, 1, 2},
 			epsilon:   1e-12,
 		},
 	} {
@@ -100,7 +102,7 @@ tests:
 				t.Errorf("unexpected SVD failure for test %d use %d", i, j)
 				continue tests
 			}
-			fmt.Println(ld.GetEigen())
+			// fmt.Println(ld.GetEigen())
 			result := ld.Transform(test.data)
 			r, _ := test.testPredict.Dims()
 			for k := 0; k < r; k++ {

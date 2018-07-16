@@ -117,10 +117,12 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		ld.ct[i] = math.Log(priori[i])
 	}
 
+	// Calculate covariance matrix
+	// First part is within-class scatter matrix
 	for i := 0; i < ld.n; i++ {
 		for j := 0; j < ld.p; j++ {
 			for l := 0; l <= j; l++ {
-				C.SetSym(j, l, (C.At(j, l) + ((x.At(i, j) - colmean[j]) * (x.At(i, l) - colmean[l]))))
+				C.SetSym(j, l, (C.At(j, l) + ((x.At(i, j) - ld.mu.At(y[i], j)) * (x.At(i, l) - ld.mu.At(y[i], l)))))
 			}
 		}
 	}
@@ -134,7 +136,31 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		}
 		if C.At(j, j) < tol {
 			panic("Covarience matrix (variable %d) is close to singular")
+	// TODO: Implement between-class scatter matrix calculations
+	// fmt.Printf("This is colmean: %v\n", colmean)
+	// overall_mean := colmean
+	// S_B := mat.NewDense(4, 4, []float64{
+	// 	0, 0, 0, 0,
+	// 	0, 0, 0, 0,
+	// 	0, 0, 0, 0,
+	// })
+	for i, j := 0, 0; i < 4; i, j = i+1, j+1 {
+		fmt.Println(j)
+		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
+		meanVec := ld.mu.RowView(y[i])
+		//FIXME: figure out how to make a column vector
+		newMeanVec := []float64{}
+		for i := 0; i < 4; i++ {
+			newMeanVec = append(newMeanVec, meanVec.AtVec(i))
+			//FIXME: very close, just need to have the statement above append each value
+			// to a nested list so that newMeanVec looks like this: [[value], [value], ...]
 		}
+		fmt.Println(newMeanVec)
+		// for _, v := range meanVec.Len {
+		// 	newMeanVec = append(newMeanVec, v.(float64))
+		// }
+		// mat.NewVecDense(1, meanVec)
+
 	}
 
 	// Factorize returns whether the decomposition succeeded
