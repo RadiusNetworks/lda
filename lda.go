@@ -136,7 +136,31 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		}
 		if C.At(j, j) < tol {
 			panic("Covarience matrix (variable %d) is close to singular")
+	// TODO: Implement between-class scatter matrix calculations
+	// fmt.Printf("This is colmean: %v\n", colmean)
+	// overall_mean := colmean
+	// S_B := mat.NewDense(4, 4, []float64{
+	// 	0, 0, 0, 0,
+	// 	0, 0, 0, 0,
+	// 	0, 0, 0, 0,
+	// })
+	for i, j := 0, 0; i < 4; i, j = i+1, j+1 {
+		fmt.Println(j)
+		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
+		meanVec := ld.mu.RowView(y[i])
+		//FIXME: figure out how to make a column vector
+		newMeanVec := []float64{}
+		for i := 0; i < 4; i++ {
+			newMeanVec = append(newMeanVec, meanVec.AtVec(i))
+			//FIXME: very close, just need to have the statement above append each value
+			// to a nested list so that newMeanVec looks like this: [[value], [value], ...]
 		}
+		fmt.Println(newMeanVec)
+		// for _, v := range meanVec.Len {
+		// 	newMeanVec = append(newMeanVec, v.(float64))
+		// }
+		// mat.NewVecDense(1, meanVec)
+
 	}
 
 	// Factorize returns whether the decomposition succeeded
