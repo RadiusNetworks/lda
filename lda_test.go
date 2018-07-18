@@ -60,11 +60,6 @@ func TestLinearDiscriminant(t *testing.T) {
 	for value := range labels {
 		labelsNumbers = append(labelsNumbers, m[labels[value]])
 	}
-	// fmt.Println(len(labelsNumbers))
-	// fmt.Println(len(trainingDataNumbers))
-	// fmt.Println(len(trainingDataText))
-	// fmt.Println(dataMatrix.Dims())
-	// fmt.Println(m)
 
 tests:
 	for i, test := range []struct {
@@ -84,14 +79,21 @@ tests:
 				7.0, 3.2, 4.7, 1.5,
 				6.3, 3.3, 6.0, 2.5,
 			}),
+			// wantVecs: mat.NewDense(4, 4, []float64{
+			// 	-0.2049, -0.3871, 0.5465, 0.7138,
+			// 	-0.009, -0.589, 0.2543, -0.767,
+			// 	0.179, -0.3178, -0.3658, 0.6011,
+			// 	0.179, -0.3178, -0.3658, 0.6011,
+			// }),
 			wantVecs: mat.NewDense(4, 4, []float64{
-				-0.2049, -0.3871, 0.5465, 0.7138,
-				-0.009, -0.589, 0.2543, -0.767,
-				0.179, -0.3178, -0.3658, 0.6011,
-				0.179, -0.3178, -0.3658, 0.6011,
+				-0.2049, -0.008982, 0.8589, -0.2484,
+				-0.3871, -0.589, -0.3655, 0.4061,
+				0.5465, 0.2543, -0.357, 0.4655,
+				0.7138, -0.767, -0.03452, -0.7461,
 			}),
-			wantVars:  []float64{3.23e+01, 2.78e-01, 4.02e-17, -4.02e-17},
-			wantClass: []int{0, 1, 2},
+			wantVars: []float64{32.271957799729854 + 0i, 0.2775668638400483 + 0i, 5.375161971935513e-15 + 0, -1.7898206465717504e-15 + 0i},
+			// wantVars:  []float64{3.23e+01, 2.78e-01, 4.02e-17, -4.02e-17},
+			wantClass: []int{2, 0, 1},
 			epsilon:   1e-12,
 		},
 	} {
@@ -103,7 +105,8 @@ tests:
 				continue tests
 			}
 			// fmt.Println(ld.GetEigen())
-			result := ld.Transform(test.data)
+			numDims := 2
+			result := ld.Transform(test.data, numDims)
 			r, _ := test.testPredict.Dims()
 			for k := 0; k < r; k++ {
 				c := ld.Predict(test.testPredict.RawRowView(k))
@@ -111,13 +114,10 @@ tests:
 					t.Errorf("unexpected prediction result %v got:%v, want:%v", k, c, test.wantClass[k])
 				}
 			}
-			v1 := make([]float64, ld.p*ld.p, ld.p*ld.p)
-			evecs := mat.NewDense(ld.p, ld.p, v1)
-			evecs.EigenvectorsSym(&ld.eigen)
 			values := make([]string, ld.p)
 			for j := 0; j < ld.n; j++ {
 				row := result.RawRowView(j)
-				for k := 0; k < ld.p; k++ {
+				for k := 0; k < numDims; k++ {
 					values[k] = fmt.Sprintf("%.4f", row[k])
 				}
 			}

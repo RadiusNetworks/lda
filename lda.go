@@ -1,7 +1,9 @@
 package lda
 
 import (
+	"fmt"
 	"math"
+	"math/cmplx"
 	"sort"
 
 	"gonum.org/v1/gonum/mat"
@@ -11,13 +13,13 @@ import (
 // matrix. The results of the linear discriminant analysis are only valid
 // if the call to LinearDiscriminant was successful.
 type LD struct {
-	n, p  int //n = row, p = col
-	k     int
+	n, p  int        //n = row, p = col
+	k     int        //number of classes
 	ct    []float64  //Constant term of discriminant function of each class
 	mu    *mat.Dense //Mean vectors of each class
 	svd   *mat.SVD
 	ok    bool
-	eigen mat.EigenSym //Eigen values of common variance matrix
+	eigen mat.Eigen //Eigen values of common variance matrix
 }
 
 // LinearDiscriminant performs a linear discriminant analysis on the
@@ -35,13 +37,16 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		panic("The sizes of X and Y don't match")
 	}
 	var labels []int
-	var labelMap = map[int]bool{}
+	var labelMap = map[int]int{}
 	for _, label := range y {
-		if !labelMap[label] {
-			labelMap[label] = true
+		if labelMap[label] == 0 {
+			labelMap[label] = 1
 			labels = append(labels, label)
+		} else {
+			labelMap[label]++
 		}
 	}
+
 	// Create a new array with labels and go through the array of y values and if
 	// it doesnt exist then add it to the new array
 	sort.Ints(labels)
@@ -87,7 +92,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	}
 
 	// C is a matrix of zeros with dimensions: ld.p x ld.p
-	C := mat.NewSymDense(ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
+	Cw := mat.NewSymDense(ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 
 	// Class mean vectors
 	// mu is a matrix with dimensions: k x ld.p
@@ -104,6 +109,8 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 			ld.mu.Set(i, j, ((ld.mu.At(i, j)) / (float64)(ni[i])))
 		}
 	}
+	// fmt.Println(ld.mu) // CORRECT
+	// fmt.Println("d-dimensional mean vectors calculation: CORRECT")
 
 	// priori is the priori probability of each class
 	priori := make([]float64, ld.k)
@@ -120,52 +127,54 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	// Calculate covariance matrix
 	// First part is within-class scatter matrix
 	for i := 0; i < ld.n; i++ {
+		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
+		// classMean := ld.mu.RowView(y[i])
 		for j := 0; j < ld.p; j++ {
 			for l := 0; l <= j; l++ {
-				C.SetSym(j, l, (C.At(j, l) + ((x.At(i, j) - ld.mu.At(y[i], j)) * (x.At(i, l) - ld.mu.At(y[i], l)))))
+				Cw.SetSym(j, l, (Cw.At(j, l) + ((x.At(i, j) - ld.mu.At(y[i], j)) * (x.At(i, l) - ld.mu.At(y[i], l)))))
 			}
 		}
 	}
-
+	// fmt.Println("Within-class covariance matrix:")
+	// fmt.Println(Cw)
 	tol = tol * tol
 
-	for j := 0; j < ld.p; j++ {
-		for l := 0; l <= j; l++ {
-			C.SetSym(j, l, ((C.At(j, l)) / (float64)(ld.n-ld.k)))
-			C.SetSym(l, j, C.At(j, l))
-		}
-		if C.At(j, j) < tol {
-			panic("Covarience matrix (variable %d) is close to singular")
-	// TODO: Implement between-class scatter matrix calculations
-	// fmt.Printf("This is colmean: %v\n", colmean)
-	// overall_mean := colmean
-	// S_B := mat.NewDense(4, 4, []float64{
-	// 	0, 0, 0, 0,
-	// 	0, 0, 0, 0,
-	// 	0, 0, 0, 0,
-	// })
-	for i, j := 0, 0; i < 4; i, j = i+1, j+1 {
-		fmt.Println(j)
-		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
-		meanVec := ld.mu.RowView(y[i])
-		//FIXME: figure out how to make a column vector
-		newMeanVec := []float64{}
-		for i := 0; i < 4; i++ {
-			newMeanVec = append(newMeanVec, meanVec.AtVec(i))
-			//FIXME: very close, just need to have the statement above append each value
-			// to a nested list so that newMeanVec looks like this: [[value], [value], ...]
-		}
-		fmt.Println(newMeanVec)
-		// for _, v := range meanVec.Len {
-		// 	newMeanVec = append(newMeanVec, v.(float64))
-		// }
-		// mat.NewVecDense(1, meanVec)
+	// Calculating between-class scatter matrix
+	Cb := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 
+	for i := 0; i < ld.k; i++ {
+		n := float64(labelMap[i])
+		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
+		// classMean := ld.mu.RowView(y[i])
+		for j := 0; j < ld.p; j++ {
+			for l := 0; l < ld.p; l++ {
+				Cb.Set(j, l, (Cb.At(j, l) + n*((ld.mu.At(i, j)-colmean[j])*(ld.mu.At(i, l)-colmean[l]))))
+			}
+		}
 	}
+	// fmt.Println(Cb)
+
+	// Solving generalized eigenvalue problem for the matrix
+	CwInverse := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
+	CwInverse.Inverse(Cw)
+	fmt.Printf("CwInverse %0.4v\n", CwInverse)
+	dotResult := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
+	fmt.Printf("This is Cb: %v\n", Cb)
+	fmt.Printf("This is Cw: %v\n", Cw)
+	dotResult.Mul(CwInverse, Cb)
+	// dotResult.Product(CwInverse, Cb)
+	fmt.Printf("Dot result: %0.4v\n", dotResult)
+	// fmt.Println(dotResult)
+	// ld.eigen.Factorize(dotResSym, true)
+	ld.eigen.Factorize(dotResult, false, true) //false, true
 
 	// Factorize returns whether the decomposition succeeded
 	// If the decomposition failed, methods that require a successful factorization will panic
-	ld.eigen.Factorize(C, true)
+	evecs := ld.eigen.Vectors()
+	evals := make([]complex128, ld.p)
+	ld.eigen.Values(evals)
+	fmt.Printf("This is evals: %v\n", evals)
+	fmt.Printf("Evecs: %.4v\n", evecs)
 	return true
 }
 
@@ -175,12 +184,16 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 //
 // Parameter x is the matrix being transformed
 // Returns the result (transformed) matrix
-func (ld *LD) Transform(x mat.Matrix) *mat.Dense {
-	values := make([]float64, ld.p*ld.p, ld.p*ld.p)
-	evecs := mat.NewDense(ld.p, ld.p, values)
-	evecs.EigenvectorsSym(&ld.eigen)
-	result := mat.NewDense(ld.n, ld.p, make([]float64, ld.n*ld.p, ld.n*ld.p))
-	result.Mul(x, evecs)
+func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
+	evecs := ld.eigen.Vectors()
+	W := mat.NewDense(ld.p, n, nil)
+	for i := 0; i < n; i++ {
+		temp := mat.Col(nil, i, evecs)
+		W.SetCol(i, temp)
+	}
+	result := mat.NewDense(ld.n, n, nil)
+	result.Mul(x, W)
+
 	return result
 }
 
@@ -191,6 +204,7 @@ func (ld *LD) Transform(x mat.Matrix) *mat.Dense {
 // Parameter x is the set of data
 // Returns which zone the set of data would be in
 func (ld *LD) Predict(x []float64) int {
+
 	if len(x) != ld.p {
 		panic("Invalid input vector size")
 	}
@@ -198,17 +212,30 @@ func (ld *LD) Predict(x []float64) int {
 	var max = math.Inf(-1)
 	d := make([]float64, ld.p)
 	ux := make([]float64, ld.p)
+	// D := mat.NewDense(1, ld.p, d)
+	D := mat.NewDense(4, 1, d)
+	UX := mat.NewDense(4, 1, ux)
+	// UX := mat.NewDense(1, ld.p, ux)
+
 	for i := 0; i < ld.k; i++ {
 		for j := 0; j < ld.p; j++ {
 			d[j] = x[j] - ld.mu.At(i, j)
 		}
+
+		evecs := ld.eigen.Vectors()
+		Atr := evecs.T()
+
+		UX.Mul(Atr, D)
+
 		var f float64
-		evals := make([]float64, ld.p)
+		evals := make([]complex128, ld.p)
 		ld.eigen.Values(evals)
 		for j := 0; j < ld.p; j++ {
-			f += ux[j] * ux[j] / math.Abs(evals[j])
+			f += ux[j] * ux[j] / cmplx.Abs(evals[j])
 		}
+		fmt.Printf("This is ld.ct: %v\n", ld.ct)
 		f = ld.ct[i] - 0.5*f
+		fmt.Println("Because of -Inf in the f calculation, the if block below never executes")
 		if max < f {
 			max = f
 			y = i
@@ -224,6 +251,6 @@ func (ld *LD) Predict(x []float64) int {
 //
 // No parameters
 // Returns eigen values
-func (ld *LD) GetEigen() mat.EigenSym {
+func (ld *LD) GetEigen() mat.Eigen {
 	return ld.eigen
 }
