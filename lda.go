@@ -1,7 +1,6 @@
 package lda
 
 import (
-	"fmt"
 	"math"
 	"math/cmplx"
 	"sort"
@@ -166,11 +165,11 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 
 	// Factorize returns whether the decomposition succeeded
 	// If the decomposition failed, methods that require a successful factorization will panic
-	evecs := ld.eigen.Vectors()
+	// evecs := ld.eigen.Vectors()
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
 	// fmt.Printf("This is eigen values: %v\n", evals)
-	fmt.Printf("This is eigen vectors: %.4v\n", evecs)
+	// fmt.Printf("This is eigen vectors: %.4v\n", evecs)
 	return true
 }
 
