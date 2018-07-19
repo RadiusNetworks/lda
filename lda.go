@@ -98,7 +98,8 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	// mu is a matrix with dimensions: k x ld.p
 	ld.mu = mat.NewDense(ld.k, ld.p, make([]float64, ld.k*ld.p, ld.k*ld.p))
 	for i := 0; i < ld.n; i++ {
-		ni[y[i]] = ni[y[i]] + 1
+		// ni[y[i]] = ni[y[i]] + 1
+		ni[y[i]]++
 		for j := 0; j < ld.p; j++ {
 			ld.mu.Set(y[i], j, ((ld.mu.At(y[i], j)) + (x.At(i, j))))
 
@@ -115,7 +116,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	// priori is the priori probability of each class
 	priori := make([]float64, ld.k)
 	for i := 0; i < ld.k; i++ {
-		priori[i] = (float64)(ni[i] / ld.n)
+		priori[i] = float64(ni[i]) / float64(ld.n)
 	}
 
 	// ct is the constant term of discriminant function of each class
@@ -157,13 +158,13 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	// Solving generalized eigenvalue problem for the matrix
 	CwInverse := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 	CwInverse.Inverse(Cw)
-	fmt.Printf("CwInverse %0.4v\n", CwInverse)
+	// fmt.Printf("CwInverse %0.4v\n", CwInverse)
 	dotResult := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
-	fmt.Printf("This is Cb: %v\n", Cb)
-	fmt.Printf("This is Cw: %v\n", Cw)
+	// fmt.Printf("This is Cb: %v\n", Cb)
+	// fmt.Printf("This is Cw: %v\n", Cw)
 	dotResult.Mul(CwInverse, Cb)
 	// dotResult.Product(CwInverse, Cb)
-	fmt.Printf("Dot result: %0.4v\n", dotResult)
+	// fmt.Printf("Dot result: %0.4v\n", dotResult)
 	// fmt.Println(dotResult)
 	// ld.eigen.Factorize(dotResSym, true)
 	ld.eigen.Factorize(dotResult, false, true) //false, true
@@ -173,7 +174,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	evecs := ld.eigen.Vectors()
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
-	fmt.Printf("This is evals: %v\n", evals)
+	// fmt.Printf("This is evals: %v\n", evals)
 	fmt.Printf("Evecs: %.4v\n", evecs)
 	return true
 }
@@ -233,9 +234,9 @@ func (ld *LD) Predict(x []float64) int {
 		for j := 0; j < ld.p; j++ {
 			f += ux[j] * ux[j] / cmplx.Abs(evals[j])
 		}
-		fmt.Printf("This is ld.ct: %v\n", ld.ct)
+		// fmt.Printf("This is ld.ct: %v\n", ld.ct)
 		f = ld.ct[i] - 0.5*f
-		fmt.Println("Because of -Inf in the f calculation, the if block below never executes")
+		// fmt.Println("Because of -Inf in the f calculation, the if block below never executes")
 		if max < f {
 			max = f
 			y = i
