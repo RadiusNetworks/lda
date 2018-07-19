@@ -110,8 +110,6 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 			ld.mu.Set(i, j, ((ld.mu.At(i, j)) / (float64)(ni[i])))
 		}
 	}
-	// fmt.Println(ld.mu) // CORRECT
-	// fmt.Println("d-dimensional mean vectors calculation: CORRECT")
 
 	// priori is the priori probability of each class
 	priori := make([]float64, ld.k)
@@ -136,8 +134,6 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 			}
 		}
 	}
-	// fmt.Println("Within-class covariance matrix:")
-	// fmt.Println(Cw)
 	tol = tol * tol
 
 	// Calculating between-class scatter matrix
@@ -153,7 +149,6 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 			}
 		}
 	}
-	// fmt.Println(Cb)
 
 	// Solving generalized eigenvalue problem for the matrix
 	CwInverse := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
@@ -174,8 +169,8 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	evecs := ld.eigen.Vectors()
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
-	// fmt.Printf("This is evals: %v\n", evals)
-	fmt.Printf("Evecs: %.4v\n", evecs)
+	// fmt.Printf("This is eigen values: %v\n", evals)
+	fmt.Printf("This is eigen vectors: %.4v\n", evecs)
 	return true
 }
 
@@ -209,41 +204,34 @@ func (ld *LD) Predict(x []float64) int {
 	if len(x) != ld.p {
 		panic("Invalid input vector size")
 	}
-	var y int
+	var y = 0
 	var max = math.Inf(-1)
 	d := make([]float64, ld.p)
 	ux := make([]float64, ld.p)
-	// D := mat.NewDense(1, ld.p, d)
-	D := mat.NewDense(4, 1, d)
 	UX := mat.NewDense(4, 1, ux)
-	// UX := mat.NewDense(1, ld.p, ux)
 
 	for i := 0; i < ld.k; i++ {
 		for j := 0; j < ld.p; j++ {
 			d[j] = x[j] - ld.mu.At(i, j)
 		}
-
 		evecs := ld.eigen.Vectors()
 		Atr := evecs.T()
-
+		D := mat.NewDense(4, 1, d)
 		UX.Mul(Atr, D)
-
 		var f float64
 		evals := make([]complex128, ld.p)
 		ld.eigen.Values(evals)
 		for j := 0; j < ld.p; j++ {
-			f += ux[j] * ux[j] / cmplx.Abs(evals[j])
+			f += UX.At(j, 0) * UX.At(j, 0) / cmplx.Abs(evals[j])
+			// f += ux[j] * ux[j] / cmplx.Abs(evals[j])
 		}
-		// fmt.Printf("This is ld.ct: %v\n", ld.ct)
-		f = ld.ct[i] - 0.5*f
-		// fmt.Println("Because of -Inf in the f calculation, the if block below never executes")
+		f = float64(ld.ct[i]) - (0.5 * f)
 		if max < f {
 			max = f
 			y = i
 		}
 	}
 	return y
-
 }
 
 // GetEigen is a getter for eigen values
