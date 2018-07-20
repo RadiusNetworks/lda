@@ -207,7 +207,7 @@ func (ld *LD) Predict(x []float64) int {
 	var max = math.Inf(-1)
 	d := make([]float64, ld.p)
 	ux := make([]float64, ld.p)
-	UX := mat.NewDense(4, 1, ux)
+	UX := mat.NewDense(len(ux), 1, ux) // len(ux) was hardcoded as 4
 
 	for i := 0; i < ld.k; i++ {
 		for j := 0; j < ld.p; j++ {
@@ -215,7 +215,7 @@ func (ld *LD) Predict(x []float64) int {
 		}
 		evecs := ld.eigen.Vectors()
 		Atr := evecs.T()
-		D := mat.NewDense(4, 1, d)
+		D := mat.NewDense(len(d), 1, d) // len(d) was hardcoded as 4
 		UX.Mul(Atr, D)
 		var f float64
 		evals := make([]complex128, ld.p)
