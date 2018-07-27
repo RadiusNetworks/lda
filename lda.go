@@ -1,6 +1,7 @@
 package lda
 
 import (
+	"fmt"
 	"math"
 	"math/cmplx"
 	"sort"
@@ -12,28 +13,28 @@ import (
 // matrix. The results of the linear discriminant analysis are only valid
 // if the call to LinearDiscriminant was successful.
 type LD struct {
-	n, p  int        //n = row, p = col
-	k     int        //number of classes
-	ct    []float64  //Constant term of discriminant function of each class
-	mu    *mat.Dense //Mean vectors of each class
+	n, p  int        // n = # of rows, p = # of columns
+	k     int        // number of classes
+	ct    []float64  // Constant term of discriminant function of each class
+	mu    *mat.Dense // Mean vectors of each class
 	svd   *mat.SVD
 	ok    bool
 	eigen mat.Eigen //Eigen values of common variance matrix
 }
 
-// LinearDiscriminant performs a linear discriminant analysis on the
-// matrix of the input data which is represented as an n×p matrix x where each
-// row is an observation and each column is a variable.
+// LinearDiscriminant performs linear discriminant analysis on the
+// matrix of the input data, which is represented as an n×p matrix x,
+// where each row is an observation and each column is a variable.
 //
 //
-// Parameter x is the training samples
-// Parameter y is the training labels in [0,k)
+// Parameter x is a matrix of input/training data
+// Parameter y is an array of input/training labels in [0,k)
 // where k is the number of classes
-// Returns whether the analysis was successful
-func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
+// Returns true iff the analysis was successful
+func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool, err error) {
 	ld.n, ld.p = x.Dims()
 	if y != nil && len(y) != ld.n {
-		panic("The sizes of X and Y don't match")
+		return false, fmt.Errorf("The sizes of X and Y don't match")
 	}
 	var labels []int
 	var labelMap = map[int]int{}
@@ -47,33 +48,34 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	}
 
 	// Create a new array with labels and go through the array of y values and if
-	// it doesnt exist then add it to the new array
+	// it doesn't exist then add it to the new array
 	sort.Ints(labels)
 
 	if labels[0] != 0 {
-		panic("Label does not start from zero")
+		return false, fmt.Errorf("Label does not start from zero")
 	}
 	for i := 0; i < len(labels); i++ {
 		if labels[i] < 0 {
-			panic("Negative class label")
+			return false, fmt.Errorf("Negative class label")
 		}
 		if i > 0 && labels[i]-labels[i-1] > 1 {
-			panic("Missing class")
+			return false, fmt.Errorf("Missing class")
 		}
 	}
+
 	// Tol is a tolerence to decide if a covariance matrix is singular (det is zero)
 	// Tol will reject variables whose variance is less than tol
 	var tol = 1E-4
-	// k is the number of classes
+
 	ld.k = len(labels)
 	if ld.k < 2 {
-		panic("Only one class.")
+		return false, fmt.Errorf("Only one class")
 	}
 	if tol < 0.0 {
-		panic("Invalid tol")
+		return false, fmt.Errorf("Invalid tol")
 	}
 	if ld.n <= ld.k {
-		panic("Sample size is too small")
+		return false, fmt.Errorf("Sample size is too small")
 	}
 
 	// Number of instances in each class
@@ -90,20 +92,16 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		colmean = append(colmean, sum/float64(ld.n))
 	}
 
-	// C is a matrix of zeros with dimensions: ld.p x ld.p
-	Cw := mat.NewSymDense(ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
-
 	// Class mean vectors
-	// mu is a matrix with dimensions: k x ld.p
+	// mu is a k x ld.p matrix
 	ld.mu = mat.NewDense(ld.k, ld.p, make([]float64, ld.k*ld.p, ld.k*ld.p))
 	for i := 0; i < ld.n; i++ {
-		// ni[y[i]] = ni[y[i]] + 1
 		ni[y[i]]++
 		for j := 0; j < ld.p; j++ {
 			ld.mu.Set(y[i], j, ((ld.mu.At(y[i], j)) + (x.At(i, j))))
-
 		}
 	}
+
 	for i := 0; i < ld.k; i++ {
 		for j := 0; j < ld.p; j++ {
 			ld.mu.Set(i, j, ((ld.mu.At(i, j)) / (float64)(ni[i])))
@@ -122,11 +120,13 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 		ld.ct[i] = math.Log(priori[i])
 	}
 
-	// Calculate covariance matrix
-	// First part is within-class scatter matrix
+	// Calculate covariance matrix in 2 steps
+
+	// Step 1: calculate within-class scatter matrix
+	// Cw is the within-class scatter matrix initialized as a ld.p x ld.p zero matrix
+	Cw := mat.NewSymDense(ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
+
 	for i := 0; i < ld.n; i++ {
-		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
-		// classMean := ld.mu.RowView(y[i])
 		for j := 0; j < ld.p; j++ {
 			for l := 0; l <= j; l++ {
 				Cw.SetSym(j, l, (Cw.At(j, l) + ((x.At(i, j) - ld.mu.At(y[i], j)) * (x.At(i, l) - ld.mu.At(y[i], l)))))
@@ -135,13 +135,12 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	}
 	tol = tol * tol
 
-	// Calculating between-class scatter matrix
+	// Step 2: calculate between-class scatter matrix
+	// Cb is the between-class scatter matrix initialized as a ld.p x ld.p zero matrix
 	Cb := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 
 	for i := 0; i < ld.k; i++ {
 		n := float64(labelMap[i])
-		// fmt.Printf("ld.mu[i]: %v\n", ld.mu.RowView(y[i]))
-		// classMean := ld.mu.RowView(y[i])
 		for j := 0; j < ld.p; j++ {
 			for l := 0; l < ld.p; l++ {
 				Cb.Set(j, l, (Cb.At(j, l) + n*((ld.mu.At(i, j)-colmean[j])*(ld.mu.At(i, l)-colmean[l]))))
@@ -152,33 +151,25 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool) {
 	// Solving generalized eigenvalue problem for the matrix
 	CwInverse := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 	CwInverse.Inverse(Cw)
-	// fmt.Printf("CwInverse %0.4v\n", CwInverse)
 	dotResult := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
-	// fmt.Printf("This is Cb: %v\n", Cb)
-	// fmt.Printf("This is Cw: %v\n", Cw)
 	dotResult.Mul(CwInverse, Cb)
-	// dotResult.Product(CwInverse, Cb)
-	// fmt.Printf("Dot result: %0.4v\n", dotResult)
-	// fmt.Println(dotResult)
-	// ld.eigen.Factorize(dotResSym, true)
-	ld.eigen.Factorize(dotResult, false, true) //false, true
+	ld.eigen.Factorize(dotResult, false, true)
 
-	// Factorize returns whether the decomposition succeeded
+	// Factorize returns whether the decomposition of the matrix into eigenvectors
+	// and eigenvalues succeeded.
 	// If the decomposition failed, methods that require a successful factorization will panic
-	// evecs := ld.eigen.Vectors()
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
-	// fmt.Printf("This is eigen values: %v\n", evals)
-	// fmt.Printf("This is eigen vectors: %.4v\n", evecs)
-	return true
+	return true, nil
 }
 
 // Transform performs a transformation on the
-// matrix of the input data which is represented as an ld.n × p matrix x
+// matrix of the input data, which is represented as an ld.n × p matrix x
 //
 //
-// Parameter x is the matrix being transformed
-// Returns the result (transformed) matrix
+// Parameter x is the matrix to be transformed
+// Parameter n is the number of dimensions desired
+// Returns the transformed matrix
 func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
 	evecs := ld.eigen.Vectors()
 	W := mat.NewDense(ld.p, n, nil)
@@ -192,22 +183,29 @@ func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
 	return result
 }
 
-// Predict performs a prediction to assess which zone a certain
-// set of data would be in
+// Predict performs a prediction based on training data
+// to assess which class a certain set of data would be in.
 //
+// Details:
+// LDA can be used as a supervised learning algorithm to predict
+// and classify data based on features extracted from training data.
+// LDA reduces dimensionality of the data and performs feature extraction
+// to maximize separation between classes.
+// Precondition: training data must be labeled and labels must be ints starting
+// from 0.
 //
-// Parameter x is the set of data
-// Returns which zone the set of data would be in
-func (ld *LD) Predict(x []float64) int {
+// Parameter x is the set of data to classify
+// Returns a prediction for what zone the set of data would be in
+func (ld *LD) Predict(x []float64) (int, error) {
 
 	if len(x) != ld.p {
-		panic("Invalid input vector size")
+		return 0, fmt.Errorf("Invalid input vector size")
 	}
 	var y = 0
 	var max = math.Inf(-1)
 	d := make([]float64, ld.p)
 	ux := make([]float64, ld.p)
-	UX := mat.NewDense(len(ux), 1, ux) // len(ux) was hardcoded as 4
+	UX := mat.NewDense(len(ux), 1, ux)
 
 	for i := 0; i < ld.k; i++ {
 		for j := 0; j < ld.p; j++ {
@@ -215,14 +213,13 @@ func (ld *LD) Predict(x []float64) int {
 		}
 		evecs := ld.eigen.Vectors()
 		Atr := evecs.T()
-		D := mat.NewDense(len(d), 1, d) // len(d) was hardcoded as 4
-		UX.Mul(Atr, D)
+		D := mat.NewDense(len(d), 1, d)
+		UX.Mul(Atr, D) // eigen vector transpose * (measurement - sum of class means)
 		var f float64
 		evals := make([]complex128, ld.p)
 		ld.eigen.Values(evals)
 		for j := 0; j < ld.p; j++ {
-			f += UX.At(j, 0) * UX.At(j, 0) / cmplx.Abs(evals[j])
-			// f += ux[j] * ux[j] / cmplx.Abs(evals[j])
+			f += UX.At(j, 0) * UX.At(j, 0) / cmplx.Abs(evals[j]) // (weighted sum of the result squared) / eigen value
 		}
 		f = float64(ld.ct[i]) - (0.5 * f)
 		if max < f {
@@ -230,15 +227,15 @@ func (ld *LD) Predict(x []float64) int {
 			y = i
 		}
 	}
-	return y
+	return y, nil
 }
 
-// GetEigen is a getter for eigen values
+// GetEigen is a getter method for eigen values
 //
 //
 //
 // No parameters
-// Returns eigen values
+// Returns a mat.Eigen object
 func (ld *LD) GetEigen() mat.Eigen {
 	return ld.eigen
 }
