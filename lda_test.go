@@ -92,8 +92,9 @@ tests:
 	} {
 		var ld LD
 		for j := 0; j < 1; j++ {
-			ok := ld.LinearDiscriminant(test.data, test.labels)
-			if !ok {
+			ok, err := ld.LinearDiscriminant(test.data, test.labels)
+			if !ok || err != nil {
+				t.Log(err)
 				t.Errorf("unexpected SVD failure for test %d use %d", i, j)
 				continue tests
 			}
@@ -101,7 +102,7 @@ tests:
 			result := ld.Transform(test.data, numDims)
 			r, _ := test.testPredict.Dims()
 			for k := 0; k < r; k++ {
-				c := ld.Predict(test.testPredict.RawRowView(k))
+				c, _ := ld.Predict(test.testPredict.RawRowView(k))
 				if c != test.wantClass[k] {
 					t.Errorf("unexpected prediction result %v got:%v, want:%v", k, c, test.wantClass[k])
 				}
