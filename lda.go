@@ -31,10 +31,10 @@ type LD struct {
 // Parameter y is an array of input/training labels in [0,k)
 // where k is the number of classes
 // Returns true iff the analysis was successful
-func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool, err error) {
+func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 	ld.n, ld.p = x.Dims()
 	if y != nil && len(y) != ld.n {
-		return false, fmt.Errorf("The sizes of X and Y don't match")
+		return fmt.Errorf("The sizes of X and Y don't match")
 	}
 	var labels []int
 	var labelMap = map[int]int{}
@@ -52,14 +52,14 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool, err error) {
 	sort.Ints(labels)
 
 	if labels[0] != 0 {
-		return false, fmt.Errorf("Label does not start from zero")
+		return fmt.Errorf("Label does not start from zero")
 	}
 	for i := 0; i < len(labels); i++ {
 		if labels[i] < 0 {
-			return false, fmt.Errorf("Negative class label")
+			return fmt.Errorf("Negative class label")
 		}
 		if i > 0 && labels[i]-labels[i-1] > 1 {
-			return false, fmt.Errorf("Missing class")
+			return fmt.Errorf("Missing class")
 		}
 	}
 
@@ -69,13 +69,13 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool, err error) {
 
 	ld.k = len(labels)
 	if ld.k < 2 {
-		return false, fmt.Errorf("Only one class")
+		return fmt.Errorf("Only one class")
 	}
 	if tol < 0.0 {
-		return false, fmt.Errorf("Invalid tol")
+		return fmt.Errorf("Invalid tol")
 	}
 	if ld.n <= ld.k {
-		return false, fmt.Errorf("Sample size is too small")
+		return fmt.Errorf("Sample size is too small")
 	}
 
 	// Number of instances in each class
@@ -160,7 +160,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (ok bool, err error) {
 	// If the decomposition failed, methods that require a successful factorization will panic
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
-	return true, nil
+	return nil
 }
 
 // Transform performs a transformation on the
