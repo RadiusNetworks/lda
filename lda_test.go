@@ -92,8 +92,8 @@ tests:
 	} {
 		var ld LD
 		for j := 0; j < 1; j++ {
-			ok, err := ld.LinearDiscriminant(test.data, test.labels)
-			if !ok || err != nil {
+			err := ld.LinearDiscriminant(test.data, test.labels)
+			if err != nil {
 				t.Log(err)
 				t.Errorf("unexpected SVD failure for test %d use %d", i, j)
 				continue tests
