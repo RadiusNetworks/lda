@@ -192,7 +192,7 @@ func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
 // to assess which class a certain set of data would be in.
 //
 // Parameter x is the set of data to classify.
-// Returns a prediction for what zone the set of data would be in.
+// Returns a prediction for what class the set of data would be in.
 //
 // Additional details:
 // LDA can be used as a supervised learning algorithm to predict

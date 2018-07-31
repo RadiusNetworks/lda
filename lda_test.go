@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"image/color"
 	"io"
 	"log"
 	"os"
@@ -11,10 +12,15 @@ import (
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
+	"gonum.org/v1/plot/vg/draw"
 )
 
 func TestLinearDiscriminant(t *testing.T) {
 	// Threshold for detecting zero variances
+	var ld LD
 	const epsilon = 1e-15
 
 	// Iris dataset training file
@@ -59,6 +65,15 @@ func TestLinearDiscriminant(t *testing.T) {
 
 	for value := range labels {
 		labelsNumbers = append(labelsNumbers, m[labels[value]])
+	}
+
+	ok := ld.LinearDiscriminant(dataMatrix, labelsNumbers) // Calling LinearDiscriminant on Iris data
+	if ok == nil {
+		fmt.Println("Call to LDA successful")
+		numDims := 2
+		result := ld.Transform(dataMatrix, numDims)
+		// Graphing results of the transformation
+		PlotLDA(result, labelsNumbers, "Iris-data-LDA-graph.png", "LDA: Iris Dataset")
 	}
 
 tests:
@@ -122,4 +137,59 @@ func checkError(message string, err error) {
 	if err != nil {
 		log.Fatal(message, err)
 	}
+}
+
+// PlotLDA plots the LDA transformation on an (X,Y) plane and returns a PNG
+// of the graph, which is saved in the same directory as the source code
+func PlotLDA(Data *mat.Dense, labels []int, imageTitle string, graphTitle string) {
+	p, err := plot.New()
+	if err != nil {
+		panic(err)
+	}
+	p.Title.Text = graphTitle
+	p.X.Label.Text = "X"
+	p.Y.Label.Text = "Y"
+
+	scatterData := matrixToPoints(Data)
+	sc, err := plotter.NewScatter(scatterData)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	sc.GlyphStyleFunc = func(i int) draw.GlyphStyle {
+		r := (map[bool]uint8{true: 128, false: 0})[labels[i]&(1<<2) != 0]
+		g := (map[bool]uint8{true: 128, false: 0})[labels[i]&(1<<1) != 0]
+		b := (map[bool]uint8{true: 128, false: 0})[labels[i]&1 != 0]
+		a := uint8(255)
+		color := color.RGBA{r, g, b, a}
+		markers := [7]draw.GlyphDrawer{
+			draw.CrossGlyph{},
+			draw.CircleGlyph{},
+			draw.PyramidGlyph{},
+			draw.TriangleGlyph{},
+			draw.SquareGlyph{},
+			draw.RingGlyph{},
+			draw.PlusGlyph{},
+		}
+		return draw.GlyphStyle{Color: color, Radius: vg.Points(3), Shape: markers[labels[i]%7]}
+	}
+	p.Add(sc)
+	p.Add(plotter.NewGrid())
+
+	if err := p.Save(8*vg.Inch, 5*vg.Inch, imageTitle); err != nil {
+		panic(err)
+	}
+}
+
+func matrixToPoints(data *mat.Dense) plotter.XYer {
+	r, c := data.Dims()
+	if c != 2 {
+		panic("Matrix must have 2 columns (2D matrix only)")
+	}
+	pts := make(plotter.XYs, r)
+	for i := 0; i < r; i++ {
+		pts[i].X = data.At(i, 0)
+		pts[i].Y = data.At(i, 1)
+	}
+	return pts
 }
