@@ -1,3 +1,8 @@
+// Package lda provides methods for calculating linear discriminant analysis (LDA).
+// LDA can be used as a dimensionality reduction technique and as a classifier.
+// Both capabilities are often used in the realm of machine learning and statistical modeling. This package
+// provides a prediction method that can classify input data based on previous calculations and
+// feature extraction from training data.
 package lda
 
 import (
@@ -27,10 +32,10 @@ type LD struct {
 // where each row is an observation and each column is a variable.
 //
 //
-// Parameter x is a matrix of input/training data
+// Parameter x is a matrix of input/training data.
 // Parameter y is an array of input/training labels in [0,k)
-// where k is the number of classes
-// Returns true iff the analysis was successful
+// where k is the number of classes.
+// Returns true iff the analysis was successful.
 func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 	ld.n, ld.p = x.Dims()
 	if y != nil && len(y) != ld.n {
@@ -167,9 +172,9 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 // matrix of the input data, which is represented as an ld.n × p matrix x
 //
 //
-// Parameter x is the matrix to be transformed
-// Parameter n is the number of dimensions desired
-// Returns the transformed matrix
+// Parameter x is the matrix to be transformed.
+// Parameter n is the number of dimensions desired.
+// Returns the transformed matrix.
 func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
 	evecs := ld.eigen.Vectors()
 	W := mat.NewDense(ld.p, n, nil)
@@ -186,16 +191,16 @@ func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
 // Predict performs a prediction based on training data
 // to assess which class a certain set of data would be in.
 //
-// Details:
+// Parameter x is the set of data to classify.
+// Returns a prediction for what zone the set of data would be in.
+//
+// Additional details:
 // LDA can be used as a supervised learning algorithm to predict
 // and classify data based on features extracted from training data.
 // LDA reduces dimensionality of the data and performs feature extraction
 // to maximize separation between classes.
 // Precondition: training data must be labeled and labels must be ints starting
 // from 0.
-//
-// Parameter x is the set of data to classify
-// Returns a prediction for what zone the set of data would be in
 func (ld *LD) Predict(x []float64) (int, error) {
 
 	if len(x) != ld.p {
@@ -234,7 +239,7 @@ func (ld *LD) Predict(x []float64) (int, error) {
 //
 //
 //
-// No parameters
+// No parameters.
 // Returns a mat.Eigen object
 func (ld *LD) GetEigen() mat.Eigen {
 	return ld.eigen
