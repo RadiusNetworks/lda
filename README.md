@@ -103,6 +103,34 @@ func PlotLDA(Data *mat.Dense, labels []int, imageTitle string) {
 }
 ```
 
+### Using `Predict` to classify test data
+
+Method `Predict` takes in a set of data and returns a number (Int), a prediction for what class the set of data would be in. Below is an example of a test that checks if Predict is classifying data correctly. <br/>
+Example: Iris test data <br/>
+(See lda_test.go for the complete implementation of this example) <br/>
+```
+// Create test cases with test data and corresponding labels (classes that you expect the data points to be in)
+// Call LinearDiscriminant with the test data and the labels as arguments
+// Call Transform
+result := ld.Transform(test.data, numDims)
+r, _ := test.testPredict.Dims()
+for k := 0; k < r; k++ {
+	c, _ := ld.Predict(test.testPredict.RawRowView(k))
+	if c != test.wantClass[k] {
+		t.Errorf("unexpected prediction result %v got:%v, want:%v", k, c, test.wantClass[k])
+	}
+}
+values := make([]string, ld.p)
+for j := 0; j < ld.n; j++ {
+	row := result.RawRowView(j)
+	for k := 0; k < numDims; k++ {
+		values[k] = fmt.Sprintf("%.4f", row[k])
+	}
+      }
+    }
+}
+```
+
 ## Tests
 
 We provide a sample test file that tests both the dimensionality reduction and the classification features of the algorithm. The test uses the famous Iris dataset, which can be found here: https://archive.ics.uci.edu/ml/datasets/Iris
