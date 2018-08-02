@@ -21,12 +21,13 @@ Import `"github.com/RadiusNetworks/lda"`
 The library contains a predefined struct `LD` that can be used to access LDA methods. <br/>
 Important note about input data: LDA is a supervised learning technique so all training data needs to be labeled. <br/>
 <br/>
-The first step would be to make a variable of type `LD` and call `LinearDiscriminant` by passing in a matrix of input data and an array of labels that correspond to the data. If that call is successful, then you can use other LDA methods, such as `Tranform` and `Predict`. <br/>
+### First step
+The first step would be to make a variable of type `LD` and call `LinearDiscriminant` by passing in a matrix of input data and an array of labels that correspond to the data. If that call is successful, then you can use other LDA methods, such as `Transform` and `Predict`. <br/>
 <br/>
 Example: Iris dataset <br/>
 ```
-// Load Iris data from iris/iris.data
-// Process data (See lda_test.go for code example)
+// Load your data
+// See lda_test.go for an example of loading and pre-processing data
 
 // Create a matrix and fill it with iris data
 dataMatrix := mat.NewDense(numberOfRows, numberofColumns, yourDataset)
@@ -37,7 +38,7 @@ for yourLabel := range labelsFromYourDataset {
 	labels = append(labels, yourLabel)
 }
 
-// Instantiate an LD object and call LinearDiscriminant to check if input data follows preconditions
+// Instantiate an LD object and call LinearDiscriminant to fit the model and check if input data follows preconditions in the process
 var ld LDA.LD
 err := ld.LinearDiscriminant(dataMatrix, labels)
 
@@ -58,52 +59,9 @@ if err == nil {
 
 ...
 
-// An example graphing function that takes in the result of the transformation, the array of labels and a title for the image it will create
-func PlotLDA(Data *mat.Dense, labels []int, imageTitle string) {
-	p, err := plot.New()
-	if err != nil {
-		panic(err)
-	}
-	p.Title.Text = "LDA Transform"
-	p.X.Label.Text = "X-axis"
-	p.Y.Label.Text = "Y-axis"
-
-	scatterData := matrixToPoints(Data)
-	sc, err := plotter.NewScatter(scatterData)
-	if err != nil {
-		log.Panic(err)
-	}
-	
-	// Iterating over various markers and colors to make the graph more visually appealing
-	sc.GlyphStyleFunc = func(i int) draw.GlyphStyle {
-		r := (map[bool]uint8{true: 128, false: 0})[labels[i]&(1<<2) != 0]
-		g := (map[bool]uint8{true: 128, false: 0})[labels[i]&(1<<1) != 0]
-		b := (map[bool]uint8{true: 128, false: 0})[labels[i]&1 != 0]
-		a := uint8(255)
-		color := color.RGBA{r, g, b, a}
-		markers := [7]draw.GlyphDrawer{
-			draw.CrossGlyph{},
-			draw.CircleGlyph{},
-			draw.PyramidGlyph{},
-			draw.TriangleGlyph{},
-			draw.SquareGlyph{},
-			draw.RingGlyph{},
-			draw.PlusGlyph{},
-		}
-		return draw.GlyphStyle{Color: color, Radius: vg.Points(3), Shape: markers[labels[i]%7]}
-	}
-	
-	p.Add(sc)
-	p.Add(plotter.NewGrid())
-	
-	// Saving the resulting graph as a PNG file
-	if err := p.Save(12*vg.Inch, 8*vg.Inch, imageTitle); err != nil {
-		panic(err)
-	}
-}
 ```
 
-### Using `Predict` to classify test data
+### Using LDA as a classifier with `Predict`
 
 Method `Predict` takes in a set of data and returns a number (Int), a prediction for what class the set of data would be in. Below is an example of a test that checks if Predict is classifying data correctly. <br/>
 Example: Iris test data <br/>
@@ -139,7 +97,7 @@ We provide a sample test file that tests both the dimensionality reduction and t
 
 The implementation of the LDA algorithm is based on a Java version provided by https://github.com/haifengl/smile <br/>
 Additional resources used: https://sebastianraschka.com/Articles/2014_python_lda.html <br/>
-Created with the help of Tim Judkins (@b0tn3rd) and Eleanor Nuechterlein (@Eleanor2)
+Created by Andrei Kozyrev (@akozyrev) with the help of Tim Judkins (@b0tn3rd) and Eleanor Nuechterlein (@Eleanor2). Open sourced by Radius Networks.
 
 ## Contributing and License
 LDA-go is Apache-2.0 licensed. Contributions are welcome.
