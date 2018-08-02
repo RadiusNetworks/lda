@@ -97,7 +97,7 @@ We provide a sample test file that tests both the dimensionality reduction and t
 
 The implementation of the LDA algorithm is based on a Java version provided by https://github.com/haifengl/smile <br/>
 Additional resources used: https://sebastianraschka.com/Articles/2014_python_lda.html <br/>
-Created by Andrei Kozyrev (@akozyrev) with the help of Tim Judkins (@b0tn3rd) and Eleanor Nuechterlein (@Eleanor2). Open sourced by Radius Networks.
+Created by Andrei Kozyrev ([@akozyrev](https://github.com/akozyrev)) with the help of Tim Judkins ([@b0tn3rd](https://github.com/b0tn3rd)) and Eleanor Nuechterlein ([@Eleanor2](https://github.com/Eleanor2)). Open sourced by Radius Networks.
 
 ## Contributing and License
 LDA-go is Apache-2.0 licensed. Contributions are welcome.
