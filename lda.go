@@ -56,6 +56,9 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 	// it doesn't exist then add it to the new array
 	sort.Ints(labels)
 
+	if len(labels) == 0 {
+		return fmt.Errorf("No data to analyze")
+	}
 	if labels[0] != 0 {
 		return fmt.Errorf("Label does not start from zero")
 	}
