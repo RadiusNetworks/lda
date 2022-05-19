@@ -73,7 +73,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 
 	// Tol is a tolerence to decide if a covariance matrix is singular (det is zero)
 	// Tol will reject variables whose variance is less than tol
-	var tol = 1E-4
+	var tol = 1e-4
 
 	ld.k = len(labels)
 	if ld.k < 2 {
@@ -161,7 +161,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 	CwInverse.Inverse(Cw)
 	dotResult := mat.NewDense(ld.p, ld.p, make([]float64, ld.p*ld.p, ld.p*ld.p))
 	dotResult.Mul(CwInverse, Cb)
-	ld.eigen.Factorize(dotResult, false, true)
+	ld.eigen.Factorize(dotResult, mat.EigenRight)
 
 	// Factorize returns whether the decomposition of the matrix into eigenvectors
 	// and eigenvalues succeeded.
@@ -169,6 +169,26 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 	evals := make([]complex128, ld.p)
 	ld.eigen.Values(evals)
 	return nil
+}
+
+// roRealMatrix returns a dense matrix with just the real parts of the given complex matrix
+func toRealMatrix(m mat.CMatrix) *mat.Dense {
+	r, c := m.Dims()
+	out := mat.NewDense(r, c, nil)
+	for i := 0; i < c; i++ {
+		for j := 0; j < r; j++ {
+			out.Set(i, j, real(m.At(i, j)))
+		}
+	}
+	return out
+}
+
+// getRealVectors returns the right eigen vectors as a real matrix, discarding
+// the imaginary parts of the complex vectors
+func getRealVectors(e *mat.Eigen) *mat.Dense {
+	var complexVectors mat.CDense
+	e.VectorsTo(&complexVectors)
+	return toRealMatrix(&complexVectors)
 }
 
 // Transform performs a transformation on the
@@ -179,7 +199,7 @@ func (ld *LD) LinearDiscriminant(x mat.Matrix, y []int) (err error) {
 // Parameter n is the number of dimensions desired.
 // Returns the transformed matrix.
 func (ld *LD) Transform(x mat.Matrix, n int) *mat.Dense {
-	evecs := ld.eigen.Vectors()
+	evecs := getRealVectors(&ld.eigen)
 	W := mat.NewDense(ld.p, n, nil)
 	for i := 0; i < n; i++ {
 		temp := mat.Col(nil, i, evecs)
@@ -219,7 +239,7 @@ func (ld *LD) Predict(x []float64) (int, error) {
 		for j := 0; j < ld.p; j++ {
 			d[j] = x[j] - ld.mu.At(i, j)
 		}
-		evecs := ld.eigen.Vectors()
+		evecs := getRealVectors(&ld.eigen)
 		Atr := evecs.T()
 		D := mat.NewDense(len(d), 1, d)
 		UX.Mul(Atr, D) // eigen vector transpose * (measurement - sum of class means)

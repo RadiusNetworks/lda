@@ -142,10 +142,7 @@ func checkError(message string, err error) {
 // PlotLDA plots the LDA transformation on an (X,Y) plane and returns a PNG
 // of the graph, which is saved in the same directory as the source code
 func PlotLDA(Data *mat.Dense, labels []int, imageTitle string, graphTitle string) {
-	p, err := plot.New()
-	if err != nil {
-		panic(err)
-	}
+	p := plot.New()
 	p.Title.Text = graphTitle
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
